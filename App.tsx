@@ -1,5 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import * as Haptics from 'expo-haptics';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -20,6 +21,7 @@ import { speedInUnit } from './src/speedLimit';
 import { isTracking, requestLocationPermissions, startTracking, stopTracking } from './src/locationTask';
 import { setupNotifications } from './src/notifications';
 import { getProSnapshot, initPurchases, purchasesEnabled, subscribePro } from './src/pro';
+import { getMutedSnapshot, isMuted, setMuted, subscribeMuted } from './src/settings';
 import {
   getState,
   NearbyCamera,
@@ -43,12 +45,48 @@ function Main() {
   const [view, setView] = useState<'map' | 'list'>('map');
   const pro = useSyncExternalStore(subscribePro, getProSnapshot);
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const muted = useSyncExternalStore(subscribeMuted, getMutedSnapshot);
+
+  const [refreshMessage, setRefreshMessage] = useState<{ text: string; ok: boolean } | null>(null);
+  const messageTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (messageTimer.current) clearTimeout(messageTimer.current);
+  }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const result = await refreshCameraData();
+      let text: string;
+      if (!result.ok) {
+        text = "✕ Couldn't refresh · check your connection";
+      } else if (result.added === 0 && result.removed === 0) {
+        text = `✓ Up to date · ${result.total} cameras`;
+      } else {
+        const changes = [
+          result.added ? `${result.added} new` : '',
+          result.removed ? `${result.removed} removed` : '',
+        ].filter(Boolean);
+        text = `✓ Updated · ${changes.join(', ')}`;
+      }
+      setRefreshMessage({ text, ok: result.ok });
+      Haptics.notificationAsync(
+        result.ok ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error,
+      ).catch(() => {});
+      if (messageTimer.current) clearTimeout(messageTimer.current);
+      messageTimer.current = setTimeout(() => setRefreshMessage(null), 3000);
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
     isTracking().then(setTracking).catch(() => setTracking(false));
     // Find and store the cameras around the user as soon as the app opens.
     preloadNearbyCameras();
     initPurchases();
+    isMuted(); // load the saved mute setting
   }, []);
 
   const onToggle = useCallback(async () => {
@@ -138,21 +176,42 @@ function Main() {
         ) : null}
       </View>
 
-      <Pressable
-        onPress={onToggle}
-        disabled={busy}
-        style={({ pressed }) => [
-          styles.button,
-          tracking ? styles.buttonStop : styles.buttonStart,
-          pressed && { opacity: 0.8 },
-        ]}
-      >
-        {busy ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>{tracking ? 'Stop alerts' : 'Start alerts'}</Text>
-        )}
-      </Pressable>
+      <View style={styles.controls}>
+        <Pressable
+          onPress={onToggle}
+          disabled={busy}
+          style={({ pressed }) => [
+            styles.button,
+            styles.buttonMain,
+            tracking ? styles.buttonStop : styles.buttonStart,
+            pressed && { opacity: 0.8 },
+          ]}
+        >
+          {busy ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>{tracking ? 'Stop alerts' : 'Start alerts'}</Text>
+          )}
+        </Pressable>
+        <Pressable
+          onPress={() => setMuted(!muted)}
+          style={({ pressed }) => [
+            styles.button,
+            styles.soundButton,
+            muted && styles.soundButtonMuted,
+            pressed && { opacity: 0.8 },
+          ]}
+          accessibilityRole="switch"
+          accessibilityLabel="Alert sound"
+          accessibilityState={{ checked: !muted }}
+          accessibilityHint={muted ? 'Turns spoken warnings back on' : 'Mutes spoken warnings and alert sounds'}
+        >
+          <Text style={styles.soundIcon}>{muted ? '🔇' : '🔊'}</Text>
+          <Text style={[styles.soundLabel, muted && styles.soundLabelMuted]}>
+            {muted ? 'Muted' : 'Sound'}
+          </Text>
+        </Pressable>
+      </View>
 
       {purchasesEnabled && !pro ? (
         <Pressable
@@ -171,12 +230,28 @@ function Main() {
       <ProPaywall visible={paywallOpen} onClose={() => setPaywallOpen(false)} />
 
       <View style={styles.metaRow}>
-        <Text style={styles.meta}>
-          {state.cameraCount} cameras loaded
-          {state.dataFetchedAt ? ` · updated ${new Date(state.dataFetchedAt).toLocaleTimeString()}` : ''}
-        </Text>
+        {refreshMessage ? (
+          <Text
+            style={[styles.meta, refreshMessage.ok ? styles.metaOk : styles.metaError]}
+            accessibilityLiveRegion="polite"
+          >
+            {refreshMessage.text}
+          </Text>
+        ) : (
+          <Text style={styles.meta}>
+            {state.cameraCount} cameras loaded
+            {state.dataFetchedAt ? ` · updated ${new Date(state.dataFetchedAt).toLocaleTimeString()}` : ''}
+          </Text>
+        )}
         {state.position ? (
-          <Pressable onPress={refreshCameraData} hitSlop={8}>
+          <Pressable
+            onPress={onRefresh}
+            disabled={refreshing}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Refresh camera data"
+            accessibilityState={{ busy: refreshing, disabled: refreshing }}
+          >
             <Text style={styles.link}>Refresh</Text>
           </Pressable>
         ) : null}
@@ -270,6 +345,20 @@ const styles = StyleSheet.create({
   heroSub: { fontSize: 16, color: '#475467', marginTop: 6 },
   textLight: { color: '#fff' },
   button: { marginTop: 16, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  controls: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  buttonMain: { flex: 1, marginTop: 0 },
+  soundButton: {
+    marginTop: 0,
+    width: 76,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#D0D5DD',
+    justifyContent: 'center',
+  },
+  soundButtonMuted: { backgroundColor: '#FEE4E2', borderColor: '#FDA29B' },
+  soundIcon: { fontSize: 20 },
+  soundLabel: { fontSize: 12, fontWeight: '600', color: '#344054', marginTop: 2 },
+  soundLabelMuted: { color: '#B42318' },
   buttonStart: { backgroundColor: '#1570EF' },
   buttonStop: { backgroundColor: '#475467' },
   buttonText: { color: '#fff', fontSize: 18, fontWeight: '700' },
@@ -284,6 +373,8 @@ const styles = StyleSheet.create({
   proBannerBody: { fontSize: 13, color: '#93370D', marginTop: 2 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
   meta: { color: '#667085', fontSize: 13 },
+  metaOk: { color: '#067647', fontWeight: '600' },
+  metaError: { color: '#D92D20', fontWeight: '600' },
   link: { color: '#1570EF', fontSize: 13, fontWeight: '600' },
   error: { color: '#D92D20', fontSize: 13, marginTop: 6 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#101828' },

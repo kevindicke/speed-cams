@@ -50,6 +50,11 @@ export function onCamerasUpdated(fn: (cache: CameraCache) => void) {
 }
 let lastFailureAt = 0;
 
+/** The saved camera data, without downloading anything. */
+export function getSavedCameras(): Promise<CameraCache | null> {
+  return readCache();
+}
+
 async function readCache(): Promise<CameraCache | null> {
   if (memoryCache) return memoryCache;
   try {

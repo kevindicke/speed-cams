@@ -88,6 +88,13 @@ export async function buy(pkg: PurchasesPackage): Promise<'purchased' | 'cancell
   try {
     const { customerInfo } = await Purchases.purchasePackage(pkg);
     setPro(hasPro(customerInfo));
+    if (!hasPro(customerInfo)) {
+      // Paid, but the product isn't attached to the Pro entitlement in RevenueCat
+      // (or PRO_ENTITLEMENT doesn't match its identifier).
+      throw new Error(
+        'Your purchase went through, but Pro could not be unlocked. Try "Restore purchases", or contact support.',
+      );
+    }
     return 'purchased';
   } catch (e) {
     if ((e as { userCancelled?: boolean | null }).userCancelled) return 'cancelled';

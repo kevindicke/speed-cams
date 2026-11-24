@@ -60,7 +60,15 @@
           "enableRemoteNotifications": false
         }
       ],
-      "expo-maps"
+      "expo-maps",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": false
+        }
+      ]
     ]
   }
 }

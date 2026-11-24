@@ -3,7 +3,7 @@ import type { LocationObject } from 'expo-location';
 import Storage from 'expo-sqlite/kv-store';
 import { AppState } from 'react-native';
 
-import { Camera, CameraCache, getCamerasNear, onCamerasUpdated } from './cameras';
+import { Camera, CameraCache, getCamerasNear, getSavedCameras, onCamerasUpdated } from './cameras';
 import {
   ALERT_RADIUS_M,
   HEADING_FILTER_MAX_DELTA_DEG,
@@ -245,6 +245,9 @@ export async function preloadNearbyCameras() {
       setState({ error: 'Allow location access to find speed cameras near you.' });
       return;
     }
+    // Alerts already running: the location task supplies fixes (with warnings on), and a
+    // preview fix here would switch the warning display off until the next update.
+    if (await isTrackingStarted()) return;
     // Last known position is instant; use it first, then refine with a fresh fix.
     const last = await Location.getLastKnownPositionAsync({ maxAge: 10 * 60_000 });
     if (last && !state.position) await processLocation(last, { alerts: false });
@@ -260,12 +263,29 @@ function isTrackingStarted() {
   return Location.hasStartedLocationUpdatesAsync(LOCATION_TASK).catch(() => false);
 }
 
-export async function refreshCameraData() {
-  if (!state.position) return;
+export type RefreshResult =
+  | { ok: true; total: number; added: number; removed: number }
+  | { ok: false };
+
+/** Downloads camera data for the current position now, and reports what changed. */
+export async function refreshCameraData(): Promise<RefreshResult> {
+  if (!state.position) return { ok: false };
+  const before = await getSavedCameras();
   try {
     // A successful download updates the list through onCamerasUpdated.
-    await getCamerasNear(state.position, true);
+    const after = await getCamerasNear(state.position, true);
+    // On failure the store hands back the old saved data: same download time.
+    if (before && after.fetchedAt === before.fetchedAt) return { ok: false };
+    const oldIds = new Set(before?.cameras.map((c) => c.id));
+    const newIds = new Set(after.cameras.map((c) => c.id));
+    return {
+      ok: true,
+      total: after.cameras.length,
+      added: after.cameras.filter((c) => !oldIds.has(c.id)).length,
+      removed: before ? before.cameras.filter((c) => !newIds.has(c.id)).length : 0,
+    };
   } catch (err) {
     setState({ error: `Couldn't load camera data: ${String(err)}` });
+    return { ok: false };
   }
 }

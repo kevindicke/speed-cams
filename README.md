@@ -42,6 +42,12 @@ The home screen has a **Map / List** switch. The map uses [`expo-maps`](https://
 
 Within ½ mile of a camera ahead, if you're more than 2 mph over its limit, the app says "Slow down! Speed camera ahead. Limit 25 miles per hour" and the screen turns dark red with a "SLOW DOWN" banner. It repeats out loud every 10 s while you're still too fast (one notification per camera, so they don't pile up). The limit comes from the camera's own `maxspeed` tag, otherwise from the roads within 25 m of it (most common value, lowest on a tie). If neither has a limit, the app can't tell whether you're speeding and gives only the normal camera warning. Tune the threshold and repeat in [src/config.ts](src/config.ts).
 
+## Sound
+
+Spoken warnings play **even with the iPhone's silent switch on**, like navigation apps. They use a playback audio session (`expo-audio`, set up in [src/notifications.ts](src/notifications.ts)) that ignores the silent switch, follows the media volume, and briefly lowers music or podcasts while speaking. On Android, speech uses the media stream, which the ringer's silent mode doesn't mute.
+
+The **🔊 Sound / 🔇 Muted** button next to Start alerts mutes spoken warnings and notification sounds; banners still appear. The setting is saved on the device ([src/settings.ts](src/settings.ts)) and applies to background alerts too. Notification sounds still follow the silent switch, since bypassing it needs Apple's Critical Alerts entitlement.
+
 ## Camera data source
 
 A weekly GitHub Action ([.github/workflows/camera-tiles.yml](.github/workflows/camera-tiles.yml)) runs [scripts/build-camera-tiles.mjs](scripts/build-camera-tiles.mjs). It merges these sources, treating cameras within 30 m of each other as the same camera, and publishes 1°×1° JSON tiles to GitHub Pages. The app downloads the tiles around the user (`CAMERA_TILES_URL` in [src/config.ts](src/config.ts)) and falls back to querying OpenStreetMap live if they're unreachable.
@@ -71,8 +77,8 @@ Licenses: OSM data is ODbL, so the in-app attribution is required. The city data
 Code: [src/pro.ts](src/pro.ts) handles purchase status (saved on the device so the background task can check it), [src/components/ProPaywall.tsx](src/components/ProPaywall.tsx) is the purchase screen, and the gating is in `processLocation` in [src/tracker.ts](src/tracker.ts). **While the RevenueCat keys in [src/config.ts](src/config.ts) are empty, everyone gets Pro.**
 
 Setup:
-1. **RevenueCat:** create a free account and a project. Under *Product catalog*, create an **entitlement** with identifier `pro`.
-2. **Test without the App Store:** in *Apps and providers > Test configuration*, create Test Store products (e.g. monthly, yearly, lifetime). Attach them to the `pro` entitlement and to an **offering** marked *current*. Put the Test Store API key in `REVENUECAT_TEST_STORE_KEY`. It's used only in debug builds; RevenueCat crashes release builds that contain it.
+1. **RevenueCat:** create a free account and a project. Under *Product catalog*, create an **entitlement** with identifier `speed_cams_pro` (must match `PRO_ENTITLEMENT` in `src/config.ts`).
+2. **Test without the App Store:** in *Apps and providers > Test configuration*, create Test Store products (e.g. monthly, yearly, lifetime). Attach them to the `speed_cams_pro` entitlement and to an **offering** marked *current*. Put the Test Store API key in `REVENUECAT_TEST_STORE_KEY`. It's used only in debug builds; RevenueCat crashes release builds that contain it.
 3. **Real purchases:** in App Store Connect (paid developer account, *Paid Apps* agreement signed), create the matching in-app purchase / subscription products. Add the App Store app in RevenueCat, import the products into the same entitlement and offering, and put the `appl_…` public key in `REVENUECAT_IOS_KEY` (`goog_…` in `REVENUECAT_ANDROID_KEY` for Google Play).
 4. Prices and options shown on the purchase screen come from the current offering, so you can change them in RevenueCat without an app update.
 5. App Store Connect *App Privacy*: declare **Purchases → Purchase History** (app functionality, not used for tracking), since RevenueCat processes it. The [privacy policy](site/privacy.html) already covers this.

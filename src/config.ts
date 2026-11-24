@@ -50,9 +50,9 @@ export const CAMERA_TILES_URL = "https://kevindicke.github.io/speed-cams/";
  * The Test Store key is used only in development builds (__DEV__): RevenueCat makes release
  * builds crash on purpose if they contain it.
  */
-export const REVENUECAT_IOS_KEY = '';
-export const REVENUECAT_ANDROID_KEY = '';
-export const REVENUECAT_TEST_STORE_KEY = '';
+export const REVENUECAT_IOS_KEY = "";
+export const REVENUECAT_ANDROID_KEY = "";
+export const REVENUECAT_TEST_STORE_KEY = "test_izLnlVHqqWOHcENYoJRHdqiAqKJ";
 
 /** Entitlement identifier configured in RevenueCat that unlocks Pro. */
-export const PRO_ENTITLEMENT = 'pro';
+export const PRO_ENTITLEMENT = 'speed_cams_pro';

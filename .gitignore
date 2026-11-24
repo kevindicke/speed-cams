@@ -45,3 +45,8 @@ yarn-error.*
 
 # local Claude Code settings
 .claude/settings.local.json
+
+# secrets: never commit (keep in a password manager / EAS / GitHub secrets)
+.env
+credentials.json
+*service-account*.json
