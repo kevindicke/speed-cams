@@ -152,30 +152,87 @@ function fromTile(t: TileCamera): Camera {
   };
 }
 
-/** Downloads the 1°×1° tiles overlapping the area around `center` from our own host. */
-async function fetchFromTiles(center: LatLng): Promise<Camera[]> {
-  const [s, w, n, e] = boundingBox(center, FETCH_RADIUS_M);
+// ---- Tiles from our own host (GitHub Pages) ---------------------------------------------
+
+/** Downloaded tiles kept in memory, so panning around the map doesn't refetch them. */
+const TILE_MEMORY_TTL_MS = 6 * 60 * 60 * 1000;
+const tileMemory = new Map<string, { at: number; cameras: Camera[] }>();
+const tileRequests = new Map<string, Promise<Camera[]>>();
+
+/** Keys ("lat_lon" of the SW corner) of the 1°×1° tiles overlapping a box. */
+function tileKeys([s, w, n, e]: [number, number, number, number]): string[] {
   const keys: string[] = [];
   for (let lat = Math.floor(s); lat <= Math.floor(n); lat++) {
     for (let lon = Math.floor(w); lon <= Math.floor(e); lon++) keys.push(`${lat}_${lon}`);
   }
-  const tiles = await Promise.all(
-    keys.map(async (key) => {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 15_000);
-      try {
-        const res = await fetch(`${CAMERA_TILES_URL.replace(/\/+$/, "")}/tiles/${key}.json`, {
-          signal: controller.signal,
-        });
-        if (res.status === 404) return []; // no cameras in this square
+  return keys;
+}
+
+function fetchTile(key: string): Promise<Camera[]> {
+  const cached = tileMemory.get(key);
+  if (cached && Date.now() - cached.at < TILE_MEMORY_TTL_MS) return Promise.resolve(cached.cameras);
+  const pending = tileRequests.get(key);
+  if (pending) return pending;
+
+  const request = (async () => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15_000);
+    try {
+      const res = await fetch(`${CAMERA_TILES_URL.replace(/\/+$/, "")}/tiles/${key}.json`, {
+        signal: controller.signal,
+      });
+      let cameras: Camera[] = [];
+      if (res.status !== 404) {
+        // 404 just means no cameras in this square.
         if (!res.ok) throw new Error(`Tiles ${res.status}`);
-        return (await res.json()) as TileCamera[];
-      } finally {
-        clearTimeout(timer);
+        cameras = sanitize(((await res.json()) as TileCamera[]).map(fromTile));
       }
-    }),
-  );
-  return tiles.flat().map(fromTile);
+      tileMemory.set(key, { at: Date.now(), cameras });
+      return cameras;
+    } finally {
+      clearTimeout(timer);
+      tileRequests.delete(key);
+    }
+  })();
+  tileRequests.set(key, request);
+  return request;
+}
+
+/** Downloads the tiles overlapping the area around `center`. */
+async function fetchFromTiles(center: LatLng): Promise<Camera[]> {
+  const tiles = await Promise.all(tileKeys(boundingBox(center, FETCH_RADIUS_M)).map(fetchTile));
+  return tiles.flat();
+}
+
+export type MapBounds = { south: number; west: number; north: number; east: number };
+
+/** Above this many tiles (~4°×4° of map) the view is too zoomed out to load cameras. */
+export const MAX_VIEW_TILES = 16;
+
+export type ViewCameras =
+  | { status: 'ok'; cameras: Camera[] }
+  | { status: 'zoom-in' }
+  | { status: 'unavailable' };
+
+/**
+ * Cameras inside the visible map area, for browsing the map anywhere (not used for
+ * warnings, which only use cameras around the user's position).
+ */
+export async function getCamerasInView(b: MapBounds): Promise<ViewCameras> {
+  if (!CAMERA_TILES_URL) return { status: 'unavailable' };
+  const keys = tileKeys([b.south, b.west, b.north, b.east]);
+  if (keys.length > MAX_VIEW_TILES) return { status: 'zoom-in' };
+  const tiles = await Promise.all(keys.map(fetchTile));
+  const cameras = tiles
+    .flat()
+    .filter(
+      (c) =>
+        c.latitude >= b.south &&
+        c.latitude <= b.north &&
+        c.longitude >= b.west &&
+        c.longitude <= b.east,
+    );
+  return { status: 'ok', cameras };
 }
 
 const MAX_NAME_LENGTH = 80;
