@@ -104,10 +104,19 @@ async function speak(text: string, options: Speech.SpeechOptions = {}) {
   });
 }
 
-export async function sendCameraAlert(title: string, body: string, spoken: string) {
-  const muted = await isMuted();
-  await notify(title, body, muted);
-  if (!muted) await speak(spoken, { rate: 1.0 });
+/**
+ * Camera warning. Always shows a popup; it's only audible (voice + notification sound)
+ * when `audible` is true (the driver is 5+ mph over the limit) and sound isn't muted.
+ */
+export async function sendCameraAlert(
+  title: string,
+  body: string,
+  spoken: string,
+  { audible }: { audible: boolean },
+) {
+  const silent = !audible || (await isMuted());
+  await notify(title, body, silent);
+  if (!silent) await speak(spoken, { rate: 1.0 });
 }
 
 /**

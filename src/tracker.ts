@@ -5,7 +5,7 @@ import { AppState } from 'react-native';
 
 import { Camera, CameraCache, getCamerasNear, getSavedCameras, onCamerasUpdated } from './cameras';
 import {
-  ALERT_RADIUS_M,
+  AUTO_UNKNOWN_SPEED_RADIUS_M,
   HEADING_FILTER_MAX_DELTA_DEG,
   HEADING_FILTER_MIN_SPEED,
   LOCATION_TASK,
@@ -18,6 +18,12 @@ import {
 import { bearingDegrees, distanceMeters, formatMiles, headingDelta, LatLng } from './geo';
 import { sendCameraAlert, sendSpeedingAlert } from './notifications';
 import { getProSnapshot, isPro } from './pro';
+import {
+  getWarningDistance,
+  getWarningDistanceSnapshot,
+  subscribeSettings,
+  warningRadiusMeters,
+} from './settings';
 import { SpeedLimit, speedInUnit } from './speedLimit';
 
 export type NearbyCamera = Camera & { distance: number; ahead: boolean };
@@ -31,6 +37,8 @@ export type TrackerState = {
   cameraCount: number;
   dataFetchedAt: number | null;
   activeAlert: NearbyCamera | null;
+  /** Current warning distance (depends on speed when the setting is Auto). */
+  alertRadiusM: number;
   /** Over the limit while approaching a camera with a known limit. */
   speeding: boolean;
   error: string | null;
@@ -46,6 +54,7 @@ let state: TrackerState = {
   cameraCount: 0,
   dataFetchedAt: null,
   activeAlert: null,
+  alertRadiusM: AUTO_UNKNOWN_SPEED_RADIUS_M,
   speeding: false,
   error: null,
 };
@@ -69,6 +78,15 @@ function setState(patch: Partial<TrackerState>) {
 }
 
 let fixSeq = 0;
+
+/** Warning distance in use right now. */
+let alertRadius = AUTO_UNKNOWN_SPEED_RADIUS_M;
+
+// Changing the warning distance in Settings applies immediately.
+subscribeSettings(() => {
+  alertRadius = warningRadiusMeters(getWarningDistanceSnapshot(), state.speedMps);
+  if (alertRadius !== state.alertRadiusM) setState({ alertRadiusM: alertRadius });
+});
 
 /** Camera IDs we've already warned about and haven't driven away from yet. */
 let alerted: Set<string> | null = null;
@@ -150,7 +168,7 @@ function showCameras(position: LatLng, data: CameraCache, heading: number | null
 
 /** The nearest camera ahead of us within the warning radius, if any. */
 function approachingCamera(nearby: NearbyCamera[]) {
-  return nearby.find((c) => c.distance <= ALERT_RADIUS_M && c.ahead);
+  return nearby.find((c) => c.distance <= alertRadius && c.ahead);
 }
 
 // When a background download finishes, refresh the list for wherever we last were.
@@ -173,7 +191,8 @@ export async function processLocation(loc: LocationObject, { alerts = true } = {
 
   // Show the fix immediately, even before camera data is available.
   const seq = ++fixSeq;
-  setState({ position, speedMps: alerts ? speed : null });
+  alertRadius = warningRadiusMeters(await getWarningDistance(), speed);
+  setState({ position, speedMps: alerts ? speed : null, alertRadiusM: alertRadius });
 
   let data: CameraCache;
   try {
@@ -205,14 +224,16 @@ export async function processLocation(loc: LocationObject, { alerts = true } = {
   }
 
   const toAlert = nearby.find(
-    (c) => c.distance <= ALERT_RADIUS_M && c.ahead && !seen.has(c.id),
+    (c) => c.distance <= alertRadius && c.ahead && !seen.has(c.id),
   );
   if (toAlert) {
     seen.add(toAlert.id);
     changed = true;
     const { title, body, spoken } = describe(toAlert, pro ? speed : null);
-    if (isSpeeding(speed, toAlert)) lastSpeedingWarn = { cameraId: toAlert.id, at: Date.now() };
-    await sendCameraAlert(title, body, spoken);
+    // Audible only when 5+ mph over the limit; otherwise just a silent popup.
+    const over = isSpeeding(speed, toAlert);
+    if (over && pro) lastSpeedingWarn = { cameraId: toAlert.id, at: Date.now() };
+    await sendCameraAlert(title, body, spoken, { audible: over });
   }
   if (changed) await saveAlerted(seen);
 

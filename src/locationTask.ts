@@ -38,7 +38,7 @@ export async function startTracking() {
     showsBackgroundLocationIndicator: true,
     foregroundService: {
       notificationTitle: 'Speed Cams is active',
-      notificationBody: 'Watching for speed cameras within ½ mile.',
+      notificationBody: 'Watching for speed cameras ahead.',
       notificationColor: '#D92D20',
     },
   });

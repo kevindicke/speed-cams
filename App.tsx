@@ -1,5 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
+import { useKeepAwake } from 'expo-keep-awake';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
   ActivityIndicator,
@@ -15,7 +16,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { CameraMap } from './src/components/CameraMap';
 import { ProPaywall } from './src/components/ProPaywall';
-import { ALERT_RADIUS_M } from './src/config';
+import { SettingsSheet } from './src/components/SettingsSheet';
 import { formatMiles } from './src/geo';
 import { speedInUnit } from './src/speedLimit';
 import { isTracking, requestLocationPermissions, startTracking, stopTracking } from './src/locationTask';
@@ -39,12 +40,15 @@ export default function App() {
 }
 
 function Main() {
+  // Keep the screen on while the app is open (e.g. mounted on the dashboard while driving).
+  useKeepAwake('speed-cams');
   const state = useSyncExternalStore(subscribe, getState);
   const [tracking, setTracking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<'map' | 'list'>('map');
   const pro = useSyncExternalStore(subscribePro, getProSnapshot);
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const muted = useSyncExternalStore(subscribeMuted, getMutedSnapshot);
 
@@ -211,7 +215,17 @@ function Main() {
             {muted ? 'Muted' : 'Sound'}
           </Text>
         </Pressable>
+        <Pressable
+          onPress={() => setSettingsOpen(true)}
+          style={({ pressed }) => [styles.button, styles.soundButton, pressed && { opacity: 0.8 }]}
+          accessibilityRole="button"
+          accessibilityLabel="Settings"
+        >
+          <Text style={styles.soundIcon}>⚙️</Text>
+          <Text style={styles.soundLabel}>Settings</Text>
+        </Pressable>
       </View>
+      <SettingsSheet visible={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       {purchasesEnabled && !pro ? (
         <Pressable
@@ -284,13 +298,14 @@ function Main() {
             cameras={state.mapCameras}
             activeAlertId={state.activeAlert?.id ?? null}
             tracking={tracking}
+            alertRadiusM={state.alertRadiusM}
           />
         </View>
       ) : (
       <FlatList
         data={state.nearby}
         keyExtractor={(c) => c.id}
-        renderItem={({ item }) => <CameraRow cam={item} showDirection={state.speedMps != null} />}
+        renderItem={({ item }) => <CameraRow cam={item} showDirection={state.speedMps != null} alertRadiusM={state.alertRadiusM} />}
         ListEmptyComponent={
           <Text style={styles.empty}>
             {state.error
@@ -313,8 +328,16 @@ function Main() {
   );
 }
 
-function CameraRow({ cam, showDirection }: { cam: NearbyCamera; showDirection: boolean }) {
-  const close = cam.distance <= ALERT_RADIUS_M;
+function CameraRow({
+  cam,
+  showDirection,
+  alertRadiusM,
+}: {
+  cam: NearbyCamera;
+  showDirection: boolean;
+  alertRadiusM: number;
+}) {
+  const close = cam.distance <= alertRadiusM;
   return (
     <View style={styles.row}>
       <View style={[styles.dot, close ? styles.dotAlert : !showDirection || cam.ahead ? styles.dotAhead : styles.dotBehind]} />

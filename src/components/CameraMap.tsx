@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Camera, getCamerasInView, MapBounds } from '../cameras';
-import { ALERT_RADIUS_M, MAP_MAX_MARKERS } from '../config';
+import { MAP_MAX_MARKERS } from '../config';
 import { distanceMeters, formatMiles, LatLng } from '../geo';
 import type { NearbyCamera } from '../tracker';
 
@@ -12,8 +12,10 @@ type Props = {
   cameras: NearbyCamera[];
   /** Camera currently being warned about, highlighted in red. */
   activeAlertId: string | null;
-  /** Whether alerts are running (shows the ½-mile warning ring around you). */
+  /** Whether alerts are running (shows the warning-distance ring around you). */
   tracking: boolean;
+  /** Current warning distance, drawn as a ring around the user. */
+  alertRadiusM: number;
 };
 
 const DEFAULT_ZOOM = 13;
@@ -43,7 +45,13 @@ type ViewState = {
   center: { latitude: number; longitude: number } | null;
 };
 
-export function CameraMap({ position, cameras: nearbyCameras, activeAlertId, tracking }: Props) {
+export function CameraMap({
+  position,
+  cameras: nearbyCameras,
+  activeAlertId,
+  tracking,
+  alertRadiusM,
+}: Props) {
   const appleRef = useRef<AppleMaps.MapView>(null);
   const googleRef = useRef<GoogleMaps.MapView>(null);
   const [following, setFollowing] = useState(true);
@@ -141,14 +149,14 @@ export function CameraMap({ position, cameras: nearbyCameras, activeAlertId, tra
             {
               id: 'alert-radius',
               center: position,
-              radius: ALERT_RADIUS_M,
+              radius: alertRadiusM,
               color: COLORS.ring,
               lineColor: COLORS.ringLine,
               lineWidth: 1,
             },
           ]
         : [],
-    [position, tracking],
+    [position, tracking, alertRadiusM],
   );
 
   const appleMarkers = useMemo<AppleMaps.Marker[]>(

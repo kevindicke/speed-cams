@@ -1,6 +1,6 @@
 # Speed Cams
 
-Expo / React Native app for iOS and Android. It warns you, with a notification, sound and spoken alert, when you come within **½ mile** of a speed camera. It keeps working in the background while you use another navigation app or have the screen off.
+Expo / React Native app for iOS and Android. It warns you before you reach a speed camera: a popup always, and a spoken warning with sound when you're **5+ mph over the limit**. The warning distance is **Auto** (about 25 seconds ahead at your speed, 0.15–0.5 mi) or a fixed ¼ or ½ mile, chosen in Settings. It keeps working in the background while you use another navigation app or have the screen off.
 
 ## Run it
 
@@ -40,7 +40,7 @@ The home screen has a **Map / List** switch. The map uses [`expo-maps`](https://
 
 ## Speeding warning
 
-Within ½ mile of a camera ahead, if you're more than 2 mph over its limit, the app says "Slow down! Speed camera ahead. Limit 25 miles per hour" and the screen turns dark red with a "SLOW DOWN" banner. It repeats out loud every 10 s while you're still too fast (one notification per camera, so they don't pile up). The limit comes from the camera's own `maxspeed` tag, otherwise from the roads within 25 m of it (most common value, lowest on a tie). If neither has a limit, the app can't tell whether you're speeding and gives only the normal camera warning. Tune the threshold and repeat in [src/config.ts](src/config.ts).
+Within the warning distance of a camera ahead, if you're 5+ mph over its limit, the app says "Slow down! Speed camera ahead. Limit 25 miles per hour" and the screen turns dark red with a "SLOW DOWN" banner. It repeats out loud every 10 s while you're still too fast (one notification per camera, so they don't pile up). The limit comes from the camera's own `maxspeed` tag, otherwise from the roads within 25 m of it (most common value, lowest on a tie). If neither has a limit, the app can't tell whether you're speeding and shows only the silent popup. Warnings when you're not 5+ over are also silent popups. Tune the threshold and repeat in [src/config.ts](src/config.ts).
 
 ## Sound
 

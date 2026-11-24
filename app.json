@@ -46,7 +46,7 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Speed Cams uses your location in the background to warn you when you are within half a mile of a speed camera, even when the screen is off.",
+          "locationAlwaysAndWhenInUsePermission": "Speed Cams uses your location in the background to warn you before you reach a speed camera, even when the screen is off.",
           "locationWhenInUsePermission": "Speed Cams uses your location to warn you when you are approaching a speed camera.",
           "isIosBackgroundLocationEnabled": true,
           "isAndroidBackgroundLocationEnabled": true,

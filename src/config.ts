@@ -1,7 +1,16 @@
 import { METERS_PER_MILE } from "./geo";
 
-/** Warn when a camera is within this distance (half a mile). */
-export const ALERT_RADIUS_M = 0.5 * METERS_PER_MILE;
+/**
+ * Warning distance. "Auto" warns about AUTO_WARNING_SECONDS before reaching a camera at
+ * the current speed (0.15 mi at 20 mph … 0.5 mi at 70+ mph); users can instead pick a
+ * fixed ¼ or ½ mile in Settings.
+ */
+export const AUTO_WARNING_SECONDS = 25;
+export const AUTO_MIN_RADIUS_M = 0.15 * METERS_PER_MILE;
+export const AUTO_MAX_RADIUS_M = 0.5 * METERS_PER_MILE;
+/** Used by "Auto" before GPS reports a speed. */
+export const AUTO_UNKNOWN_SPEED_RADIUS_M = 0.25 * METERS_PER_MILE;
+export const FIXED_RADIUS_M = { quarter: 0.25 * METERS_PER_MILE, half: 0.5 * METERS_PER_MILE };
 
 /** After alerting, don't alert for the same camera again until we're this far away. */
 export const RESET_RADIUS_M = 0.75 * METERS_PER_MILE;
@@ -25,8 +34,11 @@ export const HEADING_FILTER_MAX_DELTA_DEG = 75;
 export const LOCATION_TASK = "speed-camera-location-task";
 export const NOTIFICATION_CHANNEL = "speed-camera-alerts";
 
-/** Warn about speeding when this much over the limit (absorbs GPS speed noise): 2 mph. */
-export const SPEEDING_TOLERANCE_MPS = 2 * 0.44704;
+/**
+ * "Speeding" means at least this much over the limit (5 mph). Only then are warnings
+ * audible (voice + notification sound); otherwise they appear as a silent popup.
+ */
+export const SPEEDING_TOLERANCE_MPS = 5 * 0.44704;
 
 /** While still speeding toward a camera, repeat the spoken warning this often. */
 export const SPEEDING_REPEAT_MS = 10_000;
