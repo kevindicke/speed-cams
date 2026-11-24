@@ -27,6 +27,8 @@ jobs:
         env:
           REGIONS: US # comma-separated, e.g. "US,CA,GB" or "US-DC,US-MD"
         run: node scripts/build-camera-tiles.mjs public
+      - name: Add static pages (privacy policy)
+        run: cp -R site/. public/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public

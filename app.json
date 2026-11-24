@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.speedcameras.alerts",
       "infoPlist": {
         "UIBackgroundModes": [
@@ -15,7 +15,10 @@
           "audio"
         ]
       },
-      "appleTeamId": "N54CF2W4DB"
+      "appleTeamId": "N54CF2W4DB",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {

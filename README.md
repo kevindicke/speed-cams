@@ -62,6 +62,32 @@ Official sources are defined in [scripts/official-sources.mjs](scripts/official-
 
 Licenses: OSM data is ODbL, so the in-app attribution is required. The city datasets are public open data.
 
+## Speed Cams Pro (RevenueCat)
+
+| Free | Pro |
+|---|---|
+| Camera warnings while the app is open, map, list | Warnings in the background (screen locked, Maps/music in front) and spoken speeding warnings |
+
+Code: [src/pro.ts](src/pro.ts) handles purchase status (saved on the device so the background task can check it), [src/components/ProPaywall.tsx](src/components/ProPaywall.tsx) is the purchase screen, and the gating is in `processLocation` in [src/tracker.ts](src/tracker.ts). **While the RevenueCat keys in [src/config.ts](src/config.ts) are empty, everyone gets Pro.**
+
+Setup:
+1. **RevenueCat:** create a free account and a project. Under *Product catalog*, create an **entitlement** with identifier `pro`.
+2. **Test without the App Store:** in *Apps and providers > Test configuration*, create Test Store products (e.g. monthly, yearly, lifetime). Attach them to the `pro` entitlement and to an **offering** marked *current*. Put the Test Store API key in `REVENUECAT_TEST_STORE_KEY`. It's used only in debug builds; RevenueCat crashes release builds that contain it.
+3. **Real purchases:** in App Store Connect (paid developer account, *Paid Apps* agreement signed), create the matching in-app purchase / subscription products. Add the App Store app in RevenueCat, import the products into the same entitlement and offering, and put the `appl_…` public key in `REVENUECAT_IOS_KEY` (`goog_…` in `REVENUECAT_ANDROID_KEY` for Google Play).
+4. Prices and options shown on the purchase screen come from the current offering, so you can change them in RevenueCat without an app update.
+5. App Store Connect *App Privacy*: declare **Purchases → Purchase History** (app functionality, not used for tracking), since RevenueCat processes it. The [privacy policy](site/privacy.html) already covers this.
+
+## Releasing to the App Store
+
+- Builds: [eas.json](eas.json) has `preview` (internal install) and `production` profiles. Build numbers auto-increment on EAS (`appVersionSource: remote`). Bump `version` in `app.json` yourself for each release.
+  ```bash
+  npx eas-cli@latest build -p ios --profile production
+  npx eas-cli@latest submit -p ios --latest
+  ```
+- iPhone only (`supportsTablet: false`). The export-compliance question is answered in config (`usesNonExemptEncryption: false`, standard HTTPS only).
+- Privacy policy: [site/privacy.html](site/privacy.html), published with the camera tiles at `https://kevindicke.github.io/speed-cams/privacy.html`. Update it if the app ever starts sending data anywhere new.
+- After joining the paid Apple Developer Program, replace `ios.appleTeamId` in `app.json` with the paid team's ID.
+
 ## Store/legal notes
 - Speed-camera warning apps are **illegal in some countries** (e.g. Germany, Switzerland, France for precise locations). Consider geo-restricting.
 - Google Play requires a declaration and review for background location. Apple requires clear purpose strings (already set in `app.json`).

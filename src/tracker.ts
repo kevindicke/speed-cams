@@ -1,6 +1,7 @@
 import * as Location from 'expo-location';
 import type { LocationObject } from 'expo-location';
 import Storage from 'expo-sqlite/kv-store';
+import { AppState } from 'react-native';
 
 import { Camera, CameraCache, getCamerasNear, onCamerasUpdated } from './cameras';
 import {
@@ -16,6 +17,7 @@ import {
 } from './config';
 import { bearingDegrees, distanceMeters, formatMiles, headingDelta, LatLng } from './geo';
 import { sendCameraAlert, sendSpeedingAlert } from './notifications';
+import { getProSnapshot, isPro } from './pro';
 import { SpeedLimit, speedInUnit } from './speedLimit';
 
 export type NearbyCamera = Camera & { distance: number; ahead: boolean };
@@ -134,7 +136,8 @@ function showCameras(position: LatLng, data: CameraCache, heading: number | null
   // Only cameras ahead of us count (all of them when heading is unknown, e.g. stopped).
   const target = alertsOn ? approachingCamera(nearby) : undefined;
   setState({
-    speeding: isSpeeding(state.speedMps, target),
+    // Speeding warnings are a Pro feature.
+    speeding: getProSnapshot() && isSpeeding(state.speedMps, target),
     nearby: nearby.slice(0, 20),
     mapCameras: nearby.filter((c) => c.distance <= MAP_RADIUS_M).slice(0, MAP_MAX_MARKERS),
     cameraCount: data.cameras.length,
@@ -160,6 +163,7 @@ onCamerasUpdated((data) => {
  * With `alerts: false` it only loads and displays nearby cameras.
  */
 export async function processLocation(loc: LocationObject, { alerts = true } = {}) {
+  await isPro(); // load saved Pro status before anything reads it
   const position = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
   const speed = loc.coords.speed != null && loc.coords.speed >= 0 ? loc.coords.speed : null;
   const heading = loc.coords.heading != null && loc.coords.heading >= 0 ? loc.coords.heading : null;
@@ -184,6 +188,10 @@ export async function processLocation(loc: LocationObject, { alerts = true } = {
   const nearby = showCameras(position, data, lastHeading, alerts);
   if (!alerts) return;
 
+  // Free: warnings only while the app is on screen. Pro: also in the background.
+  const pro = await isPro();
+  if (!pro && AppState.currentState !== 'active') return;
+
   const seen = await loadAlerted();
   let changed = false;
 
@@ -202,7 +210,7 @@ export async function processLocation(loc: LocationObject, { alerts = true } = {
   if (toAlert) {
     seen.add(toAlert.id);
     changed = true;
-    const { title, body, spoken } = describe(toAlert, speed);
+    const { title, body, spoken } = describe(toAlert, pro ? speed : null);
     if (isSpeeding(speed, toAlert)) lastSpeedingWarn = { cameraId: toAlert.id, at: Date.now() };
     await sendCameraAlert(title, body, spoken);
   }
@@ -210,7 +218,7 @@ export async function processLocation(loc: LocationObject, { alerts = true } = {
 
   // Speeding toward a camera: warn out loud, and keep repeating while still too fast.
   const target = approachingCamera(nearby);
-  if (target && isSpeeding(speed, target)) {
+  if (pro && target && isSpeeding(speed, target)) {
     const now = Date.now();
     const sameCamera = lastSpeedingWarn?.cameraId === target.id;
     if (!sameCamera || now - lastSpeedingWarn!.at >= SPEEDING_REPEAT_MS) {

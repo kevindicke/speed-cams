@@ -41,3 +41,18 @@ export const MAP_MAX_MARKERS = 300;
  * directly. See scripts/build-camera-tiles.mjs and .github/workflows/camera-tiles.yml.
  */
 export const CAMERA_TILES_URL = "https://kevindicke.github.io/speed-cams/";
+
+/**
+ * RevenueCat public SDK keys (safe to commit). Find them in the RevenueCat dashboard under
+ * Project settings > API keys. While both platform keys are empty, purchases are disabled
+ * and every user gets Pro features.
+ *
+ * The Test Store key is used only in development builds (__DEV__): RevenueCat makes release
+ * builds crash on purpose if they contain it.
+ */
+export const REVENUECAT_IOS_KEY = '';
+export const REVENUECAT_ANDROID_KEY = '';
+export const REVENUECAT_TEST_STORE_KEY = '';
+
+/** Entitlement identifier configured in RevenueCat that unlocks Pro. */
+export const PRO_ENTITLEMENT = 'pro';

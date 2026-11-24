@@ -13,11 +13,13 @@ import {
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { CameraMap } from './src/components/CameraMap';
+import { ProPaywall } from './src/components/ProPaywall';
 import { ALERT_RADIUS_M } from './src/config';
 import { formatMiles } from './src/geo';
 import { speedInUnit } from './src/speedLimit';
 import { isTracking, requestLocationPermissions, startTracking, stopTracking } from './src/locationTask';
 import { setupNotifications } from './src/notifications';
+import { getProSnapshot, initPurchases, purchasesEnabled, subscribePro } from './src/pro';
 import {
   getState,
   NearbyCamera,
@@ -39,11 +41,14 @@ function Main() {
   const [tracking, setTracking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<'map' | 'list'>('map');
+  const pro = useSyncExternalStore(subscribePro, getProSnapshot);
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
   useEffect(() => {
     isTracking().then(setTracking).catch(() => setTracking(false));
     // Find and store the cameras around the user as soon as the app opens.
     preloadNearbyCameras();
+    initPurchases();
   }, []);
 
   const onToggle = useCallback(async () => {
@@ -149,6 +154,22 @@ function Main() {
         )}
       </Pressable>
 
+      {purchasesEnabled && !pro ? (
+        <Pressable
+          onPress={() => setPaywallOpen(true)}
+          style={({ pressed }) => [styles.proBanner, pressed && { opacity: 0.85 }]}
+          accessibilityRole="button"
+        >
+          <Text style={styles.proBannerTitle}>⭐ Go Pro</Text>
+          <Text style={styles.proBannerBody}>
+            {tracking
+              ? 'Free warnings work only while Speed Cams is open. Pro keeps warning with the screen off, plus speeding alerts.'
+              : 'Warnings with the screen off and "slow down" speeding alerts.'}
+          </Text>
+        </Pressable>
+      ) : null}
+      <ProPaywall visible={paywallOpen} onClose={() => setPaywallOpen(false)} />
+
       <View style={styles.metaRow}>
         <Text style={styles.meta}>
           {state.cameraCount} cameras loaded
@@ -252,6 +273,15 @@ const styles = StyleSheet.create({
   buttonStart: { backgroundColor: '#1570EF' },
   buttonStop: { backgroundColor: '#475467' },
   buttonText: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  proBanner: {
+    marginTop: 10,
+    backgroundColor: '#FEF0C7',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  proBannerTitle: { fontSize: 15, fontWeight: '700', color: '#93370D' },
+  proBannerBody: { fontSize: 13, color: '#93370D', marginTop: 2 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
   meta: { color: '#667085', fontSize: 13 },
   link: { color: '#1570EF', fontSize: 13, fontWeight: '600' },
