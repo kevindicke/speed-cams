@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "Speed Cams",
+    "slug": "speed_cameras",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.speedcameras.alerts",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "location",
+          "audio"
+        ]
+      },
+      "appleTeamId": "N54CF2W4DB"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#C4281C",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.speedcameras.alerts",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-sqlite",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Speed Cams uses your location in the background to warn you when you are within half a mile of a speed camera, even when the screen is off.",
+          "locationWhenInUsePermission": "Speed Cams uses your location to warn you when you are approaching a speed camera.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#D92D20",
+          "enableRemoteNotifications": false
+        }
+      ]
+    ]
+  }
+}
