@@ -1,0 +1,4 @@
+{
+  "_readme": "Cameras to add by hand, e.g. from cities that only publish PDF lists (NYC, Philadelphia, Baltimore, Portland, San Francisco, LA...). Each entry: lat, lon, optional maxspeed (\"25 mph\"), name, key. Entries within 30 m of a known camera are merged into it.",
+  "cameras": []
+}

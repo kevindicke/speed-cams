@@ -35,16 +35,23 @@ Within ½ mile of a camera ahead, if you're more than 2 mph over its limit, the 
 
 ## Camera data source
 
-**Current: OpenStreetMap via the Overpass API** (free, global, no key). Fixed cameras are tagged `highway=speed_camera`, often with `maxspeed`. Coverage is good in much of Europe and in US cities with camera programs (e.g. DC ~200, NYC ~60, Chicago ~27 in OSM), but it is crowd-sourced and can be incomplete. License: ODbL, so the in-app attribution is required.
+A weekly GitHub Action ([.github/workflows/camera-tiles.yml](.github/workflows/camera-tiles.yml)) runs [scripts/build-camera-tiles.mjs](scripts/build-camera-tiles.mjs). It merges these sources, treating cameras within 30 m of each other as the same camera, and publishes 1°×1° JSON tiles to GitHub Pages. The app downloads the tiles around the user (`CAMERA_TILES_URL` in [src/config.ts](src/config.ts)) and falls back to querying OpenStreetMap live if they're unreachable.
 
-Public Overpass servers are rate-limited and meant for light use. Before shipping to many users, do one of these:
-- Run a backend job that pulls cameras for your regions (Overpass or a [Geofabrik](https://download.geofabrik.de/) extract filtered with `osmium tags-filter`), then serve a static JSON/GeoJSON from a CDN and point `cameras.ts` at it.
-- Or host your own Overpass instance.
+| Source | Coverage |
+|---|---|
+| OpenStreetMap (`highway=speed_camera`) | US-wide, about 1,500 cameras, crowd-sourced and incomplete |
+| [Chicago](https://data.cityofchicago.org/d/4i42-qv3h) | 209 |
+| [Washington DC (DDOT)](https://opendata.dc.gov/) | 225, with posted limits |
+| [Seattle](https://data-seattlecitygis.opendata.arcgis.com/datasets/automatic-traffic-safety-cameras-atsc-active) | 77 |
+| [New Orleans](https://gis.nola.gov/arcgis/rest/services/Transportation/TrafficCameraLocations/MapServer/0) | 92, with posted limits |
+| [Montgomery County, MD](https://data.montgomerycountymd.gov/d/uv5p-zm58) | about 90, derived from the newest quarter of ticket data |
+| [data/manual-cameras.json](data/manual-cameras.json) | Cameras you add by hand |
 
-**Other sources to merge in:**
-- **City open-data portals** (official, authoritative): e.g. Chicago "Speed Camera Locations" (data.cityofchicago.org), NYC DOT, Washington DC Open Data "Automated Traffic Enforcement", Montgomery County MD. Most are Socrata/ArcGIS APIs that return JSON with lat/lon.
-- **SCDB.info**: a commercial worldwide database (fixed and mobile) that you license for app use.
-- **Waze**: has no public API for police/camera reports, and scraping it breaks its ToS.
+Official sources are defined in [scripts/official-sources.mjs](scripts/official-sources.mjs). If one fails, the build logs it and carries on without it. Cameras without a posted limit get the most common limit of roads within 25 m from OSM, when one is mapped.
+
+**Not available as data (Nov 2026):** NYC (about 2,000 school-zone cameras), Philadelphia, Baltimore, Portland, San Francisco, Oakland, San Jose, Los Angeles, Denver and Atlanta publish locations only as PDFs, web maps or press releases. Add those to `data/manual-cameras.json`, or add a source to `official-sources.mjs` if they start publishing data. Mobile cameras (vans, trailers) aren't covered.
+
+Licenses: OSM data is ODbL, so the in-app attribution is required. The city datasets are public open data.
 
 ## Store/legal notes
 - Speed-camera warning apps are **illegal in some countries** (e.g. Germany, Switzerland, France for precise locations). Consider geo-restricting.

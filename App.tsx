@@ -180,7 +180,7 @@ function Main() {
       />
 
       <Text style={styles.footer}>
-        Camera data © OpenStreetMap contributors (ODbL). Coverage varies; always obey posted limits.
+        Camera data © OpenStreetMap contributors (ODbL) and city open data. Coverage varies; always obey posted limits.
       </Text>
     </SafeAreaView>
   );

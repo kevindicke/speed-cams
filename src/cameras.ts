@@ -121,7 +121,8 @@ function parseCameras(elements: OverpassElement[]): Camera[] {
 
 /** One camera as stored in a tile file (raw OSM values; see build-camera-tiles.mjs). */
 type TileCamera = {
-  id: number;
+  /** OSM node id (number), or "<source>:<key>" for cameras from official city data. */
+  id: number | string;
   lat: number;
   lon: number;
   maxspeed?: string;
@@ -135,7 +136,7 @@ function fromTile(t: TileCamera): Camera {
   const own = parseMaxspeed(t.maxspeed);
   const road = own ? undefined : pickRoadLimit(t.roads ?? []);
   return {
-    id: `osm-${t.id}`,
+    id: typeof t.id === 'number' ? `osm-${t.id}` : t.id,
     latitude: t.lat,
     longitude: t.lon,
     maxspeed: t.maxspeed,

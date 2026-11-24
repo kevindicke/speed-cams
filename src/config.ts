@@ -1,4 +1,4 @@
-import { METERS_PER_MILE } from './geo';
+import { METERS_PER_MILE } from "./geo";
 
 /** Warn when a camera is within this distance (half a mile). */
 export const ALERT_RADIUS_M = 0.5 * METERS_PER_MILE;
@@ -22,8 +22,8 @@ export const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 export const HEADING_FILTER_MIN_SPEED = 5;
 export const HEADING_FILTER_MAX_DELTA_DEG = 75;
 
-export const LOCATION_TASK = 'speed-camera-location-task';
-export const NOTIFICATION_CHANNEL = 'speed-camera-alerts';
+export const LOCATION_TASK = "speed-camera-location-task";
+export const NOTIFICATION_CHANNEL = "speed-camera-alerts";
 
 /** Warn about speeding when this much over the limit (absorbs GPS speed noise): 2 mph. */
 export const SPEEDING_TOLERANCE_MPS = 2 * 0.44704;
@@ -36,4 +36,4 @@ export const SPEEDING_REPEAT_MS = 10_000;
  * e.g. 'https://<github-user>.github.io/<repo>'. Leave empty to query OpenStreetMap
  * directly. See scripts/build-camera-tiles.mjs and .github/workflows/camera-tiles.yml.
  */
-export const CAMERA_TILES_URL = '';
+export const CAMERA_TILES_URL = "https://kevindicke.github.io/speed-cams/";
