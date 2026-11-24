@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
   textLight: { color: '#fff' },
   button: { marginTop: 16, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   controls: { flexDirection: 'row', gap: 10, marginTop: 16 },
-  buttonMain: { flex: 1, marginTop: 0 },
+  buttonMain: { flex: 1, marginTop: 0, justifyContent: 'center' },
   soundButton: {
     marginTop: 0,
     width: 76,
