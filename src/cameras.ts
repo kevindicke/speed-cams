@@ -178,20 +178,53 @@ async function fetchFromTiles(center: LatLng): Promise<Camera[]> {
   return tiles.flat().map(fromTile);
 }
 
+const MAX_NAME_LENGTH = 80;
+
+/**
+ * Downloaded data comes from crowd-sourced and third-party sources: drop cameras with
+ * impossible coordinates and trim oversized text before it reaches the UI.
+ */
+function sanitize(cameras: Camera[]): Camera[] {
+  const out: Camera[] = [];
+  for (const cam of cameras) {
+    const { latitude: lat, longitude: lon } = cam;
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    if (Math.abs(lat) > 90 || Math.abs(lon) > 180 || (lat === 0 && lon === 0)) continue;
+    const name =
+      typeof cam.name === 'string' && cam.name.trim()
+        ? cam.name.trim().slice(0, MAX_NAME_LENGTH)
+        : undefined;
+    const maxspeed =
+      typeof cam.maxspeed === 'string' ? cam.maxspeed.slice(0, 20) : undefined;
+    out.push({ ...cam, id: String(cam.id).slice(0, 100), name, maxspeed });
+  }
+  return out;
+}
+
 /** Our own tiles first (fast); the public Overpass API if they're not set up or unreachable. */
 async function fetchCameras(center: LatLng): Promise<Camera[]> {
   if (CAMERA_TILES_URL) {
     try {
-      return await fetchFromTiles(center);
+      return sanitize(await fetchFromTiles(center));
     } catch (err) {
       console.warn('[cameras] tiles failed, falling back to Overpass', String(err));
     }
   }
-  return fetchFromOverpass(center);
+  return sanitize(await fetchFromOverpass(center));
 }
 
+/** Rounding the query center to this grid (~7 mi) adds at most this much offset. */
+const OVERPASS_GRID_DEG = 0.1;
+const OVERPASS_GRID_SLACK_M = 8_000;
+
 async function fetchFromOverpass(center: LatLng): Promise<Camera[]> {
-  const [s, w, n, e] = boundingBox(center, FETCH_RADIUS_M).map((v) => v.toFixed(5));
+  // Privacy: the public Overpass server must not learn the user's exact position, so
+  // query around a point snapped to a ~7-mile grid, widened to still cover the same area.
+  const snap = (v: number) => Math.round(v / OVERPASS_GRID_DEG) * OVERPASS_GRID_DEG;
+  const coarse = { latitude: snap(center.latitude), longitude: snap(center.longitude) };
+  const [s, w, n, e] = boundingBox(coarse, FETCH_RADIUS_M + OVERPASS_GRID_SLACK_M).map((v) =>
+    v.toFixed(3),
+  );
   // Fixed speed cameras are tagged highway=speed_camera in OpenStreetMap. For each one,
   // also return the speed limits of roads within 25 m: many cameras have no limit of
   // their own. The output is each camera followed by its roads' tags, in order.
