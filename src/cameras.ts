@@ -159,7 +159,7 @@ async function fetchFromTiles(center: LatLng): Promise<Camera[]> {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 15_000);
       try {
-        const res = await fetch(`${CAMERA_TILES_URL}/tiles/${key}.json`, {
+        const res = await fetch(`${CAMERA_TILES_URL.replace(/\/+$/, "")}/tiles/${key}.json`, {
           signal: controller.signal,
         });
         if (res.status === 404) return []; // no cameras in this square

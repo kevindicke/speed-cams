@@ -31,6 +31,10 @@ export const SPEEDING_TOLERANCE_MPS = 2 * 0.44704;
 /** While still speeding toward a camera, repeat the spoken warning this often. */
 export const SPEEDING_REPEAT_MS = 10_000;
 
+/** Map shows cameras within this distance of you, capped for performance. */
+export const MAP_RADIUS_M = 10_000;
+export const MAP_MAX_MARKERS = 300;
+
 /**
  * Where the pre-built camera tiles are hosted (GitHub Pages), without a trailing slash,
  * e.g. 'https://<github-user>.github.io/<repo>'. Leave empty to query OpenStreetMap

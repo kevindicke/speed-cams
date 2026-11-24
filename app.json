@@ -56,7 +56,8 @@
           "color": "#D92D20",
           "enableRemoteNotifications": false
         }
-      ]
+      ],
+      "expo-maps"
     ]
   }
 }

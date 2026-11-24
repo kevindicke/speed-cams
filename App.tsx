@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
+import { CameraMap } from './src/components/CameraMap';
 import { ALERT_RADIUS_M } from './src/config';
 import { formatMiles } from './src/geo';
 import { speedInUnit } from './src/speedLimit';
@@ -37,6 +38,7 @@ function Main() {
   const state = useSyncExternalStore(subscribe, getState);
   const [tracking, setTracking] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [view, setView] = useState<'map' | 'list'>('map');
 
   useEffect(() => {
     isTracking().then(setTracking).catch(() => setTracking(false));
@@ -160,7 +162,35 @@ function Main() {
       </View>
       {state.error ? <Text style={styles.error}>{state.error}</Text> : null}
 
-      <Text style={styles.sectionTitle}>Nearby cameras</Text>
+      <View style={styles.sectionRow}>
+        <Text style={styles.sectionTitle}>Nearby cameras</Text>
+        <View style={styles.segment} accessibilityRole="tablist">
+          {(['map', 'list'] as const).map((v) => (
+            <Pressable
+              key={v}
+              onPress={() => setView(v)}
+              style={[styles.segmentItem, view === v && styles.segmentItemOn]}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: view === v }}
+            >
+              <Text style={[styles.segmentText, view === v && styles.segmentTextOn]}>
+                {v === 'map' ? 'Map' : 'List'}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      {view === 'map' ? (
+        <View style={styles.mapWrap}>
+          <CameraMap
+            position={state.position}
+            cameras={state.mapCameras}
+            activeAlertId={state.activeAlert?.id ?? null}
+            tracking={tracking}
+          />
+        </View>
+      ) : (
       <FlatList
         data={state.nearby}
         keyExtractor={(c) => c.id}
@@ -178,6 +208,7 @@ function Main() {
         }
         contentContainerStyle={{ paddingBottom: 24 }}
       />
+      )}
 
       <Text style={styles.footer}>
         Camera data © OpenStreetMap contributors (ODbL) and city open data. Coverage varies; always obey posted limits.
@@ -225,7 +256,20 @@ const styles = StyleSheet.create({
   meta: { color: '#667085', fontSize: 13 },
   link: { color: '#1570EF', fontSize: 13, fontWeight: '600' },
   error: { color: '#D92D20', fontSize: 13, marginTop: 6 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', marginTop: 20, marginBottom: 8, color: '#101828' },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#101828' },
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  segment: { flexDirection: 'row', backgroundColor: '#E9EAEC', borderRadius: 10, padding: 3 },
+  segmentItem: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
+  segmentItemOn: { backgroundColor: '#fff' },
+  segmentText: { fontSize: 14, fontWeight: '600', color: '#667085' },
+  segmentTextOn: { color: '#101828' },
+  mapWrap: { flex: 1, marginBottom: 8 },
   empty: { color: '#667085', paddingVertical: 16 },
   row: {
     flexDirection: 'row',

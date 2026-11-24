@@ -8,6 +8,8 @@ import {
   HEADING_FILTER_MAX_DELTA_DEG,
   HEADING_FILTER_MIN_SPEED,
   LOCATION_TASK,
+  MAP_MAX_MARKERS,
+  MAP_RADIUS_M,
   RESET_RADIUS_M,
   SPEEDING_REPEAT_MS,
   SPEEDING_TOLERANCE_MPS,
@@ -22,6 +24,8 @@ export type TrackerState = {
   position: LatLng | null;
   speedMps: number | null;
   nearby: NearbyCamera[];
+  /** Cameras to plot on the map: everything within MAP_RADIUS_M, nearest first. */
+  mapCameras: NearbyCamera[];
   cameraCount: number;
   dataFetchedAt: number | null;
   activeAlert: NearbyCamera | null;
@@ -36,6 +40,7 @@ let state: TrackerState = {
   position: null,
   speedMps: null,
   nearby: [],
+  mapCameras: [],
   cameraCount: 0,
   dataFetchedAt: null,
   activeAlert: null,
@@ -131,6 +136,7 @@ function showCameras(position: LatLng, data: CameraCache, heading: number | null
   setState({
     speeding: isSpeeding(state.speedMps, target),
     nearby: nearby.slice(0, 20),
+    mapCameras: nearby.filter((c) => c.distance <= MAP_RADIUS_M).slice(0, MAP_MAX_MARKERS),
     cameraCount: data.cameras.length,
     dataFetchedAt: data.fetchedAt,
     activeAlert: target ?? null,

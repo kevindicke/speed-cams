@@ -18,6 +18,15 @@ npx eas-cli@latest build --profile development --platform all
 
 To test without driving, simulate a route: **iOS Simulator** → Features → Location → Freeway Drive / custom GPX. **Android Emulator** → Extended controls → Location → Routes.
 
+## Map
+
+The home screen has a **Map / List** switch. The map uses [`expo-maps`](https://docs.expo.dev/versions/v58.0.0/sdk/maps/): Apple Maps on iOS (free, no key) and Google Maps on Android ([src/components/CameraMap.tsx](src/components/CameraMap.tsx)).
+
+**Android needs a free Google Maps API key** (the map is blank without one):
+1. In [Google Cloud Console](https://console.cloud.google.com/), create a project and enable **Maps SDK for Android**. Google asks for a billing account, but the native mobile maps SDK isn't charged per map load.
+2. Create an API key and restrict it to Android apps (package `com.speedcameras.alerts` and your signing certificate's SHA-1).
+3. Add it to `app.json` under `expo.android.config.googleMaps.apiKey`, then rebuild (`npx expo run:android`).
+
 ## How it works
 
 | File | Role |
