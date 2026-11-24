@@ -50,6 +50,11 @@ async function notify(title: string, body: string, muted: boolean) {
       body,
       sound: muted ? false : 'default',
       priority: Notifications.AndroidNotificationPriority.MAX,
+      // Shows on the lock screen right away, even with a Focus (e.g. Driving) or
+      // Scheduled Summary on, which otherwise hold normal notifications back.
+      // Needs the Time Sensitive entitlement (paid Apple Developer account) to take effect;
+      // without it iOS treats this as a normal alert.
+      interruptionLevel: 'timeSensitive',
       ...(Platform.OS === 'android' ? { channelId } : {}),
     },
     trigger: Platform.OS === 'android' ? { channelId } : null,

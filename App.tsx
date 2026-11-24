@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  RefreshControl,
   Linking,
   Pressable,
   StyleSheet,
@@ -257,18 +258,6 @@ function Main() {
             {state.dataFetchedAt ? ` · updated ${new Date(state.dataFetchedAt).toLocaleTimeString()}` : ''}
           </Text>
         )}
-        {state.position ? (
-          <Pressable
-            onPress={onRefresh}
-            disabled={refreshing}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Refresh camera data"
-            accessibilityState={{ busy: refreshing, disabled: refreshing }}
-          >
-            <Text style={styles.link}>Refresh</Text>
-          </Pressable>
-        ) : null}
       </View>
       {state.error ? <Text style={styles.error}>{state.error}</Text> : null}
 
@@ -318,6 +307,9 @@ function Main() {
           </Text>
         }
         contentContainerStyle={{ paddingBottom: 24 }}
+        refreshControl={
+          state.position ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined
+        }
       />
       )}
 
@@ -398,7 +390,6 @@ const styles = StyleSheet.create({
   meta: { color: '#667085', fontSize: 13 },
   metaOk: { color: '#067647', fontWeight: '600' },
   metaError: { color: '#D92D20', fontWeight: '600' },
-  link: { color: '#1570EF', fontSize: 13, fontWeight: '600' },
   error: { color: '#D92D20', fontSize: 13, marginTop: 6 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#101828' },
   sectionRow: {

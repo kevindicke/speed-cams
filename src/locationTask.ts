@@ -31,8 +31,10 @@ export async function startTracking() {
   if (await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK)) return;
   await Location.startLocationUpdatesAsync(LOCATION_TASK, {
     accuracy: Location.Accuracy.BestForNavigation,
-    distanceInterval: 25, // meters between updates
-    timeInterval: 2000, // Android
+    // Roughly one fix per second, so the speed readout and warnings stay current.
+    distanceInterval: 0,
+    timeInterval: 1000, // Android
+    deferredUpdatesInterval: 0, // iOS: deliver each fix immediately instead of batching
     activityType: Location.ActivityType.AutomotiveNavigation,
     pausesUpdatesAutomatically: false,
     showsBackgroundLocationIndicator: true,
